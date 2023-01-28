@@ -3,7 +3,7 @@ import os
 from PIL import Image
 from tqdm import tqdm
 
-from deeplab import DeeplabV3
+from deeplab_segmentation import DeeplabV3_Segmentation
 from utils.utils_metrics import compute_mIoU, show_results
 
 """
@@ -12,20 +12,17 @@ from utils.utils_metrics import compute_mIoU, show_results
 2、该文件计算的是验证集的miou，当前该库将测试集当作验证集使用，不单独划分测试集
 """
 
-
-def main():
-    # ---------------------------------------------------------------------------#
-    #   miou_mode用于指定该文件运行时计算的内容
-    #   miou_mode为0代表整个miou计算流程，包括获得预测结果、计算miou。
-    #   miou_mode为1代表仅仅获得预测结果。
-    #   miou_mode为2代表仅仅计算miou。
-    # ---------------------------------------------------------------------------#
-    miou_mode = 0
-    num_classes = 7
-    # --------------------------------------------#
-    #   区分的种类，和json_to_dataset里面的一样
-    # --------------------------------------------#
-    name_classes = [
+val_cfg = dict(
+    description="model validation",
+    # ---------- 验证模式的参数 ----------
+    miou_mode=0,  # 0, 1, 2
+    mix_type=1,  # 0混合, 1仅原图, 2仅原图中的目标_扣去背景 get_miou不起作用
+    # ---------- 卷积模型的参数 ----------
+    model_path="./logs",
+    backbone="xception",
+    aux_branch=False,
+    num_classes=7,
+    name_classes=[
         "Background_waterbody",
         "Human_divers",
         "Wrecks_and_ruins",
@@ -33,34 +30,60 @@ def main():
         "Reefs_and_invertebrates",
         "Fish_and_vertebrates",
         "sea_floor_and_rocks",
-    ]
-    # -------------------------------------------------------#
-    #   指向VOC数据集所在的文件夹
-    #   默认指向根目录下的VOC数据集
-    # -------------------------------------------------------#
-    SUIMdevkit_path = "../../dataset/SUIMdevkit"
+    ],
+    input_shape=[512, 512],
+    cuda=True,
+    # ---------- 文件夹的位置参数 ----------
+    dataset_path="../../dataset/SUIMdevkit",
+    file_name="train.txt",
+    save_file_dir="./miou_out_train",
+)
+
+
+def main(val_cfg):
+    # ---------------------------------------------------------------------------#
+    #   miou_mode用于指定该文件运行时计算的内容
+    #   miou_mode为0代表整个miou计算流程，包括获得预测结果、计算miou。
+    #   miou_mode为1代表仅仅获得预测结果。
+    #   miou_mode为2代表仅仅计算miou。
+    # ---------------------------------------------------------------------------#
+    miou_mode = val_cfg["miou_mode"]
+    num_classes = val_cfg["num_classes"]
+    name_classes = val_cfg["name_classes"]
+    SUIMdevkit_path = val_cfg["dataset_path"]
 
     image_ids = (
         open(
-            os.path.join(SUIMdevkit_path, "SUIM2022/ImageSets/Segmentation/train.txt"),
+            os.path.join(
+                SUIMdevkit_path, "SUIM2022/ImageSets/Segmentation", val_cfg["file_name"]
+            ),
             "r",
         )
         .read()
         .splitlines()
     )
     gt_dir = os.path.join(SUIMdevkit_path, "SUIM2022/SegmentationClass/")
-    miou_out_path = "miou_out_train"
+    miou_out_path = val_cfg["save_file_dir"]
     pred_dir = os.path.join(miou_out_path, "detection-results")
 
+    # ---------- 生成预测的mask ----------
     if miou_mode == 0 or miou_mode == 1:
         if not os.path.exists(pred_dir):
             os.makedirs(pred_dir)
 
-        print("Load model.")
-        deeplab = DeeplabV3()
-        print("Load model done.")
+        print("💾💾💾 Load model")
+        deeplab = DeeplabV3_Segmentation(
+            val_cfg["model_path"],
+            val_cfg["num_classes"],
+            val_cfg["backbone"],
+            val_cfg["input_shape"],
+            val_cfg["aux_branch"],
+            val_cfg["mix_type"],
+            val_cfg["cuda"],
+        )
+        print("💾💾💾 Load model done")
 
-        print("Get predict result.")
+        print("---------- Get predict result ----------")
         for image_id in tqdm(image_ids):
             image_path = os.path.join(
                 SUIMdevkit_path, "SUIM2022/JPEGImages/" + image_id + ".jpg"
@@ -68,16 +91,17 @@ def main():
             image = Image.open(image_path)
             image = deeplab.get_miou_png(image)
             image.save(os.path.join(pred_dir, image_id + ".png"))
-        print("Get predict result done.")
+        print("---------- Get predict result done ----------")
 
+    # ---------- 计算预测的mask和真实的mask 混淆矩阵 ----------
     if miou_mode == 0 or miou_mode == 2:
-        print("Get miou.")
+        print("---------- Get miou ----------")
         hist, IoUs, PA_Recall, Precision = compute_mIoU(
             gt_dir, pred_dir, image_ids, num_classes, name_classes
         )  # 执行计算mIoU的函数
-        print("Get miou done.")
+        print("---------- Get miou done ----------")
         show_results(miou_out_path, hist, IoUs, PA_Recall, Precision, name_classes)
 
 
 if __name__ == "__main__":
-    main()
+    main(val_cfg)

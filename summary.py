@@ -7,19 +7,28 @@ from torchsummary import summary
 
 from nets.deeplabv3_plus import DeepLab
 
-if __name__ == "__main__":
-    input_shape = [512, 512]
-    num_classes = 7
-    backbone = "xception"
+model_cfg = dict(
+    input_shape=[512, 512],
+    num_classes=7,
+    backbone="xception",
+    device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def main(model_cfg):
+    input_shape = model_cfg["input_shape"]
+    num_classes = model_cfg["num_classes"]
+    backbone = model_cfg["backbone"]
+    device = model_cfg["device"]
+
+    # ---------- 实例化深度卷积模型 ----------
     model = DeepLab(
-        num_classes=num_classes,
-        backbone=backbone,
+        num_classes,
+        backbone,
         pretrained=False,
         downsample_factor=8,
     ).to(device)
-    summary(model, (3, input_shape[0], input_shape[1]))
+    summary(model, input_size=(3, input_shape[0], input_shape[1]))
 
     dummy_input = torch.randn(1, 3, input_shape[0], input_shape[1]).to(device)
     flops, params = profile(model.to(device), (dummy_input,), verbose=False)
@@ -33,3 +42,7 @@ if __name__ == "__main__":
     flops, params = clever_format([flops, params], "%.3f")
     print("Total GFLOPS: %s" % (flops))
     print("Total params: %s" % (params))
+
+
+if __name__ == "__main__":
+    main(model_cfg)

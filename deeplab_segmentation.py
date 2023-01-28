@@ -1,5 +1,6 @@
 import colorsys
 import copy
+import json
 import time
 
 import cv2
@@ -10,15 +11,24 @@ from PIL import Image
 from torch import nn
 
 from nets.deeplabv3_plus import DeepLab
-from utils.utils import cvtColor, preprocess_input, resize_image, show_config
+from utils.utils import (
+    cvtColor,
+    preprocess_input,
+    resize_image,
+    show_config,
+    time_synchronized,
+)
+
+# -------------------------------------------------#
+#   mix_type参数用于控制检测结果的可视化方式
+#
+#   mix_type = 0的时候代表原图与生成的图进行混合
+#   mix_type = 1的时候代表仅保留生成的图
+#   mix_type = 2的时候代表仅扣去背景，仅保留原图中的目标
+# -------------------------------------------------#
 
 
-# -----------------------------------------------------------------------------------#
-#   使用自己训练好的模型预测需要修改3个参数
-#   model_path、backbone和num_classes都需要修改！
-#   如果出现shape不匹配，一定要注意训练时的model_path、backbone和num_classes的修改
-# -----------------------------------------------------------------------------------#
-class DeeplabV3(object):
+class DeeplabV3_Segmentation(object):
     _defaults = {
         # -------------------------------------------------------------------#
         #   model_path指向logs文件夹下的权值文件
@@ -63,8 +73,27 @@ class DeeplabV3(object):
     # ---------------------------------------------------#
     #   初始化Deeplab
     # ---------------------------------------------------#
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        model_path,
+        num_classes,
+        backbone,
+        input_shape,
+        aux,
+        mix_type,
+        cuda,
+        **kwargs,
+    ):
+        self._defaults = {}
+        self._defaults["model_path"] = model_path
+        self._defaults["num_classes"] = num_classes
+        self._defaults["backbone"] = backbone
+        self._defaults["input_shape"] = input_shape
+        self._defaults["aux"] = aux
+        self._defaults["mix_type"] = mix_type
+        self._defaults["cuda"] = cuda
         self.__dict__.update(self._defaults)
+
         for name, value in kwargs.items():
             setattr(self, name, value)
         # ---------------------------------------------------#
@@ -73,27 +102,12 @@ class DeeplabV3(object):
         if self.num_classes <= 21:
             self.colors = [
                 (0, 0, 0),
-                (128, 0, 0),
-                (0, 128, 0),
-                (128, 128, 0),
                 (0, 0, 128),
-                (128, 0, 128),
                 (0, 128, 128),
+                (128, 0, 0),
+                (128, 0, 128),
+                (128, 128, 0),
                 (128, 128, 128),
-                (64, 0, 0),
-                (192, 0, 0),
-                (64, 128, 0),
-                (192, 128, 0),
-                (64, 0, 128),
-                (192, 0, 128),
-                (64, 128, 128),
-                (192, 128, 128),
-                (0, 64, 0),
-                (128, 64, 0),
-                (0, 192, 0),
-                (128, 192, 0),
-                (0, 64, 128),
-                (128, 64, 12),
             ]
         else:
             hsv_tuples = [
@@ -106,24 +120,34 @@ class DeeplabV3(object):
                     self.colors,
                 )
             )
+
+        # ---------- 读取调色板 ----------
+        palette_path = "./palette_suim.json"
+        with open(palette_path, "rb") as f:
+            palette_dict = json.load(f)
+            palette = []
+            for v in palette_dict.values():
+                palette += v
+        self.palette = palette
+
         # ---------------------------------------------------#
         #   获得模型
         # ---------------------------------------------------#
         self.generate()
-
+        # 打印超参数
         show_config(**self._defaults)
 
     # ---------------------------------------------------#
     #   获得所有的分类
     # ---------------------------------------------------#
-    def generate(self, onnx=False):
+    def generate(self):
         # -------------------------------#
         #   载入模型与权值
         # -------------------------------#
         self.net = DeepLab(
-            num_classes=self.num_classes,
-            backbone=self.backbone,
-            downsample_factor=self.downsample_factor,
+            self.num_classes,
+            self.backbone,
+            self.downsample_factor,
             pretrained=False,
         )
 
@@ -131,10 +155,9 @@ class DeeplabV3(object):
         self.net.load_state_dict(torch.load(self.model_path, map_location=device))
         self.net = self.net.eval()
         print("{} model, and classes loaded.".format(self.model_path))
-        if not onnx:
-            if self.cuda:
-                self.net = nn.DataParallel(self.net)
-                self.net = self.net.cuda()
+        if self.cuda:
+            self.net = nn.DataParallel(self.net)
+            self.net = self.net.cuda()
 
     # ---------------------------------------------------#
     #   检测图片
@@ -312,7 +335,7 @@ class DeeplabV3(object):
                 ),
             ]
 
-        t1 = time.time()
+        t1 = time_synchronized()
         for _ in range(test_interval):
             with torch.no_grad():
                 # ---------------------------------------------------#
@@ -336,52 +359,8 @@ class DeeplabV3(object):
                         (self.input_shape[1] - nw) // 2 + nw
                     ),
                 ]
-        t2 = time.time()
-        tact_time = (t2 - t1) / test_interval
+        tact_time = (time_synchronized() - t1) / test_interval
         return tact_time
-
-    def convert_to_onnx(self, simplify, model_path):
-        import onnx
-
-        self.generate(onnx=True)
-
-        im = torch.zeros(1, 3, *self.input_shape).to(
-            "cpu"
-        )  # image size(1, 3, 512, 512) BCHW
-        input_layer_names = ["images"]
-        output_layer_names = ["output"]
-
-        # Export the model
-        print(f"Starting export with onnx {onnx.__version__}.")
-        torch.onnx.export(
-            self.net,
-            im,
-            f=model_path,
-            verbose=False,
-            opset_version=12,
-            training=torch.onnx.TrainingMode.EVAL,
-            do_constant_folding=True,
-            input_names=input_layer_names,
-            output_names=output_layer_names,
-            dynamic_axes=None,
-        )
-
-        # Checks
-        model_onnx = onnx.load(model_path)  # load onnx model
-        onnx.checker.check_model(model_onnx)  # check onnx model
-
-        # Simplify onnx
-        if simplify:
-            import onnxsim
-
-            print(f"Simplifying with onnx-simplifier {onnxsim.__version__}.")
-            model_onnx, check = onnxsim.simplify(
-                model_onnx, dynamic_input_shape=False, input_shapes=None
-            )
-            assert check, "assert check failed"
-            onnx.save(model_onnx, model_path)
-
-        print("Onnx model save as {}".format(model_path))
 
     def get_miou_png(self, image):
         # ---------------------------------------------------------#
@@ -441,5 +420,6 @@ class DeeplabV3(object):
             # ---------------------------------------------------#
             pr = pr.argmax(axis=-1)
 
-        image = Image.fromarray(np.uint8(pr))
-        return image
+        mask = Image.fromarray(np.uint8(pr))
+        mask.putpalette(self.palette, rawmode="BGR")
+        return mask

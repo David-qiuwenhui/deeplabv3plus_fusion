@@ -23,7 +23,7 @@ model_cfg = dict(
     # ---------- 卷积模型超参数 ----------
     backbone="xception",  #  所使用的的主干网络 "mobilenet", "xception"
     num_classes=7,
-    input_size=512,  # the size of input image
+    input_shape=[512, 512],  # the size of input image
     downsample_factor=8,
     aux_branch=None,  # auxilier loss
     # pretrained_model = False,
@@ -72,7 +72,7 @@ def main(model_cfg):
     pretrained = model_cfg["pretrained_backbone"]  # 使用主干网络预训练
     model_path = model_cfg["model_path"]
     downsample_factor = model_cfg["downsample_factor"]
-    input_shape = [model_cfg["input_size"], model_cfg["input_size"]]  # 输入图片的大小
+    input_shape = model_cfg["input_shape"]  # 输入图片的大小
     Init_Epoch = model_cfg["init_epoch"]
     Freeze_Epoch = model_cfg["freeze_epochs"]
     Freeze_batch_size = model_cfg["freeze_batch_size"]
