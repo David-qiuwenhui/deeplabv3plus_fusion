@@ -14,11 +14,13 @@ from utils.utils import time_synchronized
 pred_cfg = dict(
     # ---------- 预测模式的参数 ----------
     # predict, dir_predict, fps, video
-    mode="fps",  # predict, dir_predict, fps, video
-    mix_type=1,  # 0混合, 1仅原图, 2仅原图中的目标_扣去背景
-    model_path="./logs",
+    mode="dir_predict",  # predict, dir_predict, fps, video
+    mix_type=0,  # 0混合, 1仅原图, 2仅原图中的目标_扣去背景
+    # ---------- 深度卷积神经网络模型的超参数 ----------
+    model_path="./logs/best_epoch_weights.pth",
     backbone="xception",
     input_shape=[512, 512],
+    downsample_factor=8,
     num_classes=7,
     name_classes=[
         "Background_waterbody",
@@ -55,6 +57,7 @@ def main(pred_cfg):
         pred_cfg["num_classes"],
         pred_cfg["backbone"],
         pred_cfg["input_shape"],
+        pred_cfg["downsample_factor"],
         pred_cfg["aux_branch"],
         pred_cfg["mix_type"],
         pred_cfg["cuda"],
@@ -105,7 +108,7 @@ def main(pred_cfg):
         #   dir_origin_path和dir_save_path仅在mode='dir_predict'时有效
         # -------------------------------------------------------------------------#
 
-        dir_origin_path = pred_cfg["img/"]
+        dir_origin_path = pred_cfg["dir_origin_path"]
         dir_save_path = pred_cfg["dir_save_path"]
 
         img_names = os.listdir(dir_origin_path)

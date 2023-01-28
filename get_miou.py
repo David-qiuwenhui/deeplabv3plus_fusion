@@ -18,7 +18,7 @@ val_cfg = dict(
     miou_mode=0,  # 0, 1, 2
     mix_type=1,  # 0混合, 1仅原图, 2仅原图中的目标_扣去背景 get_miou不起作用
     # ---------- 卷积模型的参数 ----------
-    model_path="./logs",
+    model_path="./logs/best_epoch_weights.pth",
     backbone="xception",
     aux_branch=False,
     num_classes=7,
@@ -32,6 +32,7 @@ val_cfg = dict(
         "sea_floor_and_rocks",
     ],
     input_shape=[512, 512],
+    downsample_factor=8,
     cuda=True,
     # ---------- 文件夹的位置参数 ----------
     dataset_path="../../dataset/SUIMdevkit_mini",
@@ -77,6 +78,7 @@ def main(val_cfg):
             val_cfg["num_classes"],
             val_cfg["backbone"],
             val_cfg["input_shape"],
+            val_cfg["downsample_factor"],
             val_cfg["aux_branch"],
             val_cfg["mix_type"],
             val_cfg["cuda"],

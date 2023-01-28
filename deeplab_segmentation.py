@@ -79,6 +79,7 @@ class DeeplabV3_Segmentation(object):
         num_classes,
         backbone,
         input_shape,
+        downsample_factor,
         aux,
         mix_type,
         cuda,
@@ -89,6 +90,7 @@ class DeeplabV3_Segmentation(object):
         self._defaults["num_classes"] = num_classes
         self._defaults["backbone"] = backbone
         self._defaults["input_shape"] = input_shape
+        self._defaults["downsample_factor"] = downsample_factor
         self._defaults["aux"] = aux
         self._defaults["mix_type"] = mix_type
         self._defaults["cuda"] = cuda
