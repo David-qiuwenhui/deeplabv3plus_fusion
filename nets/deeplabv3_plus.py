@@ -6,7 +6,7 @@ from nets.mobilenetv2 import mobilenetv2
 
 
 class MobileNetV2(nn.Module):
-    def __init__(self, downsample_factor=8, pretrained=True):
+    def __init__(self, pretrained=True, downsample_factor=8):
         super(MobileNetV2, self).__init__()
         from functools import partial
 
@@ -185,9 +185,7 @@ class DeepLab(nn.Module):
             #   浅层特征    [128,128,256]
             #   主干部分    [30,30,2048]
             # ----------------------------------#
-            self.backbone = xception(
-                downsample_factor=downsample_factor, pretrained=pretrained
-            )
+            self.backbone = xception(pretrained, downsample_factor)
             in_channels = 2048  # 主干部分的特征 (2048,30,30)
             low_level_channels = 256  # 浅层特征 (256,128,128)
         elif backbone == "mobilenet":
@@ -196,9 +194,7 @@ class DeepLab(nn.Module):
             #   浅层特征    [128,128,24]
             #   主干部分    [30,30,320]
             # ----------------------------------#
-            self.backbone = MobileNetV2(
-                downsample_factor=downsample_factor, pretrained=pretrained
-            )
+            self.backbone = MobileNetV2(pretrained, downsample_factor)
             in_channels = 320  # 主干部分的特征(320,30,30)
             low_level_channels = 24  # 浅层特征(24,128,128)
         else:

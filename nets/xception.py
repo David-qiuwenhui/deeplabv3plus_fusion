@@ -212,7 +212,9 @@ class Xception(nn.Module):
         self.block2 = Block(
             in_filters=128, out_filters=256, strides=stride_list[0], inplace=False
         )  # strides=2
-        self.block3 = Block(in_filters=256, out_filters=728, strides=stride_list[1])  # strides=1
+        self.block3 = Block(
+            in_filters=256, out_filters=728, strides=stride_list[1]
+        )  # strides=1
 
         # ------ session3 ------
         rate = 16 // downsample_factor  # 2
@@ -317,7 +319,9 @@ class Xception(nn.Module):
         # ------ session2 ------
         x = self.block1(x)  # (bs,128,128,128)
         x = self.block2(x)  # (bs,256,64,64)
-        low_featrue_layer = self.block2.hook_layer  # lower_feature_layer(bs,256,128,128)
+        low_featrue_layer = (
+            self.block2.hook_layer
+        )  # lower_feature_layer(bs,256,128,128)
         x = self.block3(x)  # (bs,728,64,64)
         # ------ session3 ------
         x = self.block4(x)  # (bs,728,64,64)

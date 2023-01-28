@@ -147,8 +147,8 @@ class DeeplabV3_Segmentation(object):
         self.net = DeepLab(
             self.num_classes,
             self.backbone,
-            self.downsample_factor,
             pretrained=False,
+            downsample_factor=self.downsample_factor,
         )
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

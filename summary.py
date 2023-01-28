@@ -1,12 +1,14 @@
-# --------------------------------------------#
-#   该部分代码用于看网络结构
-# --------------------------------------------#
 import torch
 from thop import clever_format, profile
 from torchsummary import summary
 
 from nets.deeplabv3_plus import DeepLab
 
+
+# --------------------------------------------#
+#  模型结构的配置
+#  计算模型的参数量和单位时间的浮点运算量
+# --------------------------------------------#
 model_cfg = dict(
     input_shape=[512, 512],
     num_classes=7,
