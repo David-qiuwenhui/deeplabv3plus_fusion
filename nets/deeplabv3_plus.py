@@ -177,9 +177,7 @@ class ASPP(nn.Module):
 
 
 class DeepLab(nn.Module):
-    def __init__(
-        self, num_classes, backbone="xception", pretrained=True, downsample_factor=8
-    ):
+    def __init__(self, num_classes, backbone, pretrained=False, downsample_factor=8):
         super(DeepLab, self).__init__()
         if backbone == "xception":
             # ----------------------------------#
