@@ -5,3 +5,4 @@
 ### Backbone: "Xception, MobileNet"
 ### Neck: ASPP module
 ### Head: deepLabV3plus
+### low_feature dim = 256

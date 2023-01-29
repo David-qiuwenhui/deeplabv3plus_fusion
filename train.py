@@ -18,8 +18,8 @@ from utils.utils_fit import fit_one_epoch
 # 模型的超参数
 model_cfg = dict(
     description="pytorch deeplabv3plus fusion training",
-    # ---------- 数据集超参数 ----------
-    data_path="../../dataset/SUIMdevkit_mini",  # dataset root
+    # ---------- 数据集超参数 -----------
+    data_path="../../dataset/SUIMdevkit",  # dataset root
     # ---------- 卷积模型超参数 ----------
     backbone="xception",  #  所使用的的主干网络 "mobilenet", "xception"
     num_classes=7,

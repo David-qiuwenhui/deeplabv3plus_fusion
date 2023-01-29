@@ -147,16 +147,16 @@ class Block(nn.Module):
         )
 
     def forward(self, inp):
-        # shortcut
+        # shortcut 捷径分支连接
         if self.skip is not None:
             skip = self.skip(inp)
             skip = self.skipbn(skip)
         else:
-            skip = inp  # map
+            skip = inp  # map 直接映射的捷径分支
 
         x = self.sepconv1(inp)
         x = self.sepconv2(x)
-        self.hook_layer = x
+        self.hook_layer = x  # 通过hook的方式保存浅层次的特征
         x = self.sepconv3(x)
 
         x += skip
@@ -183,8 +183,9 @@ class Xception(nn.Module):
             stride_list = [2, 2, 1]
         else:
             raise ValueError("xception.py: output stride=%d is not supported." % os)
-        # stride_list = [2, 1, 1]
-        # ------ session1 ------
+        # downsample_factor=8, stride_list=[2, 1, 1]
+
+        # ---------- session1 ----------
         self.conv1 = nn.Conv2d(
             in_channels=3,
             out_channels=32,
@@ -351,27 +352,9 @@ class Xception(nn.Module):
         )  # low_feature_layer tensor(bs,256,128,128)  x(bs,2048,64,64)
 
 
-# 下载和载入模型的权重文件
-def load_url(url, model_dir="./model_data", map_location=None):
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
-    filename = url.split("/")[-1]
-    cached_file = os.path.join(model_dir, filename)
-    if os.path.exists(cached_file):
-        return torch.load(cached_file, map_location=map_location)
-    else:
-        return model_zoo.load_url(url, model_dir=model_dir)
-
-
-def xception(pretrained=True, downsample_factor=16):
-    model = Xception(downsample_factor=downsample_factor)
+def xception(pretrained=False, downsample_factor=8):
+    model = Xception(downsample_factor)
     # 载入模型主干部分的预训练权重
     if pretrained:
         model.load_state_dict(torch.load("./model_data/xception_pytorch_imagenet.pth"))
-        # model.load_state_dict(
-        #     load_url(
-        #         "https://github.com/bubbliiiing/deeplabv3-plus-pytorch/releases/download/v1.0/xception_pytorch_imagenet.pth"
-        #     ),
-        #     strict=False,
-        # )
     return model

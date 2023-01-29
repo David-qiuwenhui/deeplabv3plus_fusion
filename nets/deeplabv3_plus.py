@@ -211,18 +211,18 @@ class DeepLab(nn.Module):
         )  # dim_in=2048 dim_out=256 rate=2
 
         # ----------------------------------#
-        #   浅层特征边
+        #   浅层特征边的卷积处理模块 将通道维度调整为48
         # ----------------------------------#
         self.shortcut_conv = nn.Sequential(
-            nn.Conv2d(in_channels=low_level_channels, out_channels=48, kernel_size=1),
-            nn.BatchNorm2d(num_features=48),
+            nn.Conv2d(in_channels=low_level_channels, out_channels=256, kernel_size=1),
+            nn.BatchNorm2d(num_features=256),
             nn.ReLU(inplace=True),
         )
 
         # Concat拼接浅层特征和ASPP处理后的特征
         self.cat_conv = nn.Sequential(
             nn.Conv2d(
-                in_channels=48 + 256,
+                in_channels=512,
                 out_channels=256,
                 kernel_size=3,
                 stride=1,
@@ -256,7 +256,7 @@ class DeepLab(nn.Module):
         x = self.aspp(x)  # x(bs, 256, 64, 64)
         low_level_features = self.shortcut_conv(
             low_level_features
-        )  # low_level_features(bs, 48, 128, 128)
+        )  # low_level_features(bs, 256, 128, 128)
 
         # -----------------------------------------#
         #   将加强特征边上采样

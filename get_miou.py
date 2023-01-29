@@ -35,7 +35,7 @@ val_cfg = dict(
     downsample_factor=8,
     cuda=True,
     # ---------- 文件夹的位置参数 ----------
-    dataset_path="../../dataset/SUIMdevkit_mini",
+    dataset_path="../../dataset/SUIMdevkit",
     file_name="val.txt",
     save_file_dir="./miou_out_val",
 )
