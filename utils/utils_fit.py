@@ -143,13 +143,13 @@ def fit_one_epoch(
 
     if local_rank == 0:
         pbar.close()
-        print("--------- Finish Train! ----------")
+        print("--------- Finish Train ----------")
         print("********** Start Validation **********")
         pbar = tqdm(
             total=epoch_step_val,
-            desc=f"Epoch {epoch + 1}/{Epoch}",
+            desc=f"💡Epoch {epoch + 1}/{Epoch}",
             postfix=dict,
-            mininterval=0.3,
+            mininterval=0.1,
         )
 
     model_train.eval()
